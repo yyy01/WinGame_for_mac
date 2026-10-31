@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "counter-strike",
+  "name": "Counter-Strike Original Mac",
+  "version": "1.0",
+  "executable": "hl.exe",
+  "working_directory": ".",
+  "arguments": ["-game", "cstrike", "-nobreakpad"],
+  "environment": {},
+  "steam_app_id": "10",
+  "readiness_timeout_seconds": 120,
+  "notes": "Requires a licensed local Windows Steam installation. Original game assets are not included."
+}

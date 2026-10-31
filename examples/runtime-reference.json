@@ -1,0 +1,16 @@
+{
+  "purpose": "Reference versions already tested locally; not an automatic installer or a runtime registration file",
+  "engine": {
+    "name": "WS12WineSikarugir10.0_6",
+    "url": "https://github.com/Sikarugir-App/Engines/releases/download/v1.0/WS12WineSikarugir10.0_6.tar.xz",
+    "sha256": "9da7ee0cbf386522f3a9906943726d9c3c125dbbd9ab120e3cde80e88d6091b2"
+  },
+  "framework_source": {
+    "name": "Template-1.0.7",
+    "url": "https://github.com/Sikarugir-App/Template/releases/download/v1.0/Template-1.0.7.tar.xz",
+    "sha256": "d2a4364b998aeb7071089d191de57d8ce23fed2c56cd91bf7d60127399601f9d"
+  },
+  "tested_host": "Apple M2, macOS 14.5, Rosetta 2",
+  "tested_games": ["counter-strike", "condition-zero"],
+  "sync": "msync"
+}

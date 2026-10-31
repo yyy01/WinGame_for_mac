@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "id": "my-game",
+  "name": "My Game Mac",
+  "version": "1.0",
+  "executable": "Game.exe",
+  "working_directory": ".",
+  "arguments": [],
+  "environment": {},
+  "notes": "Example only. Replace executable and arguments with those of your licensed game."
+}
