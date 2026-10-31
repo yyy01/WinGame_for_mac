@@ -6,6 +6,7 @@ import plistlib
 import shutil
 import subprocess
 import tempfile
+import uuid
 from importlib.resources import files
 from pathlib import Path
 
@@ -149,8 +150,8 @@ def build_app(root: Path, game_id: str, output: Path, *, replace: bool = False) 
         if target.exists():
             backup = target.with_name(target.name + ".previous")
             if backup.exists():
-                raise ConfigError(
-                    "Previous backup exists; move it aside before another replacement"
+                backup = target.with_name(
+                    target.name + ".previous-" + uuid.uuid4().hex[:12]
                 )
             target.rename(backup)
             try:

@@ -12,6 +12,7 @@
 - Steam 就绪检查、实际时间超时、取消等待、同一 prefix 互斥启动、2 MiB 有界日志。
 - 游戏导入优先使用 APFS 写时复制，失败后普通复制。原始安装目录保持独立；也支持明确引用现有副本。
 - 启动器封面、Mac `.icns` 图标替换；构建时缩放图片、生成多尺寸图标并本地签名。
+- CS/GoldSrc 游戏内主菜单背景替换：生成独立 TGA 分块，备份并恢复原始背景布局。
 - 文件检查、原版资源 SHA-256 对照、只含白名单结果的诊断导出。
 
 默认不会添加改动帧率、分辨率、鼠标、画质、机器人、武器或游戏规则的参数。CS 示例仅使用原版 `-game` 与兼容性参数 `-nobreakpad`。
@@ -75,7 +76,26 @@ i686-w64-mingw32-gcc -Os -s src/wgfm/resources/steam_ready.c -o /path/to/tools/S
 
 同一 GoldSrc 安装的 Condition Zero 使用 `examples/condition-zero.json`；若共享 prefix，必须引用同一个 runtime ID。启动器只允许其中一个游戏同时运行，退出后自动释放锁。Steam 可以保持后台运行以便下次启动。
 
-## 更换封面和应用图标
+## 更换游戏内主菜单背景
+
+CS 1.6 与 Condition Zero 支持独立的主菜单背景适配。先退出游戏，选择本地图片：
+
+```sh
+.venv/bin/wgfm menu-background counter-strike --image '/path/to/menu.jpg'
+# 再次启动游戏即可看到；不需要重建 .app。
+open "$HOME/Applications/Counter-Strike Original Mac.app"
+
+# 退出游戏后恢复原图。
+.venv/bin/wgfm menu-background counter-strike --restore
+```
+
+默认按中心裁切生成 2048×1280 背景，适合这里实测的 16:10 游戏窗口。可用 `--width` / `--height` 指定尺寸：每边为 256 的倍数，范围 256–4096；4:3 可用 2048×1536。源图不超过 32 MiB。组件生成原版引擎可读的 256×256、24 位 TGA 分块，不更改菜单按钮、字体、规则或地图加载画面。
+
+两个菜单布局文件先备份再替换，恢复时核验哈希，原本不存在的覆盖文件会删除，以恢复原版继承关系。已经应用背景时先 `--restore` 再换另一张图。手工改过的布局不会被静默覆盖，手工改过的图片分块会保留。备份只在本机 `backups/<game-id>/goldsrc-menu` 中，不应上传。
+
+默认导入的游戏副本会应用这个外观修改；使用 `--adopt-existing` 的游戏会修改其明确引用的目录。其他引擎的主菜单资源格式各不相同，当前命令会拒绝不支持的游戏。实际新封面需要用户自行指定图片，组件不会自动生成或下载。
+
+## 启动器封面和应用图标
 
 支持 PNG/JPEG 等系统可解码图片；图标也可直接使用 `.icns`。建议封面使用横图、图标使用方图，每张输入不超过 32 MiB。构建时封面最大边缩到 1600 px，图标生成 16–1024 px 多尺寸版本。
 
@@ -85,9 +105,9 @@ i686-w64-mingw32-gcc -Os -s src/wgfm/resources/steam_ready.c -o /path/to/tools/S
 .venv/bin/wgfm build counter-strike --replace
 ```
 
-新应用替换前，旧版保留为 `.app.previous`；再次替换前请先移走这份备份。图标和封面由构建结果携带，源图片丢失不会影响已构建应用。Finder/Dock 可能缓存旧图标，退出旧程序后从新应用启动即可。
+新应用替换前，旧版保留为 `.app.previous`；已有备份时使用带唯一后缀的新备份名。图标和封面由构建结果携带，源图片丢失不会影响已构建应用。Finder/Dock 可能缓存旧图标，退出旧程序后从新应用启动即可。
 
-这里修改的是**启动器封面和 Mac 应用图标**。游戏内主菜单背景与 Steam 游戏库封面属于各自独立的资源和平台设置，当前组件不修改它们。
+`artwork` 修改的是**启动器封面和 Mac 应用图标**；`menu-background` 修改的是**支持游戏的主菜单背景**。Steam 游戏库封面属于 Steam 平台设置，当前组件不修改它。
 
 ## 检查与维护
 

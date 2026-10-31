@@ -6,7 +6,7 @@ __pycache__/
 build/
 dist/
 *.app/
-*.app.previous/
+*.app.previous*/
 *.zip
 *.dmg
 *.exe
@@ -29,3 +29,9 @@ userdata/
 loginusers.vdf
 ssfn*
 *.reg
+*.whl
+backups/
+artwork/
+cache/
+logs/
+benchmarks/

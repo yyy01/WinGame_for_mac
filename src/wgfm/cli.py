@@ -27,6 +27,7 @@ from .core import (
     runtime_add,
     stop_session,
 )
+from .menu import restore_menu, set_menu
 
 
 def parser() -> argparse.ArgumentParser:
@@ -73,6 +74,16 @@ def parser() -> argparse.ArgumentParser:
     a.add_argument("id")
     a.add_argument("--cover", type=Path)
     a.add_argument("--icon", type=Path)
+    menu = sub.add_parser(
+        "menu-background",
+        help="Replace or restore CS/GoldSrc in-game main menu background",
+    )
+    menu.add_argument("id")
+    choice = menu.add_mutually_exclusive_group(required=True)
+    choice.add_argument("--image", type=Path)
+    choice.add_argument("--restore", action="store_true")
+    menu.add_argument("--width", type=int, default=2048)
+    menu.add_argument("--height", type=int, default=1280)
     s = sub.add_parser(
         "sync", help="Stop this Wine session and change its synchronization mode"
     )
@@ -151,6 +162,12 @@ def main(argv=None) -> int:
                 "artwork_updated": True,
                 "next_step": "build --replace to apply",
             }
+        elif c == "menu-background":
+            result = (
+                restore_menu(root, args.id)
+                if args.restore
+                else set_menu(root, args.id, args.image, args.width, args.height)
+            )
         elif c == "stop":
             stop_session(root, args.id)
             result = {"game_id": args.id, "session_stopped": True}

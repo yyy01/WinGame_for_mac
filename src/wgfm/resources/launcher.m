@@ -511,10 +511,103 @@ static int MakeIcon(NSString *source, NSString *folder) {
   return NSTerminateCancel;
 }
 @end
+// GoldSrc VGUI reads small TGA tiles referenced by its background layouts.
+// ImageIO decodes; legacy 24-bit TGA output is uncompressed and bounded.
+static int MakeBackground(NSString *source, NSString *folder, int width,
+                          int height) {
+  if (width < 256 || height < 256 || width > 4096 || height > 4096 ||
+      width % 256 || height % 256)
+    return 64;
+  CGImageSourceRef input = CGImageSourceCreateWithURL(
+      (__bridge CFURLRef)[NSURL fileURLWithPath:source], NULL);
+  if (!input)
+    return 65;
+  NSDictionary *options = @{
+    (id)kCGImageSourceCreateThumbnailFromImageAlways : @YES,
+    (id)kCGImageSourceThumbnailMaxPixelSize : @4096,
+    (id)kCGImageSourceCreateThumbnailWithTransform : @YES
+  };
+  CGImageRef image = CGImageSourceCreateThumbnailAtIndex(
+      input, 0, (__bridge CFDictionaryRef)options);
+  CFRelease(input);
+  if (!image)
+    return 65;
+  CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+  CGContextRef ctx = CGBitmapContextCreate(
+      NULL, width, height, 8, width * 4, space, kCGImageAlphaPremultipliedLast);
+  CGColorSpaceRelease(space);
+  if (!ctx) {
+    CGImageRelease(image);
+    return 70;
+  }
+  CGContextSetRGBFillColor(ctx, 0, 0, 0, 1);
+  CGContextFillRect(ctx, CGRectMake(0, 0, width, height));
+  double scale = MAX((double)width / CGImageGetWidth(image),
+                     (double)height / CGImageGetHeight(image));
+  double w = CGImageGetWidth(image) * scale,
+         h = CGImageGetHeight(image) * scale;
+  CGContextSetInterpolationQuality(ctx, kCGInterpolationHigh);
+  CGContextDrawImage(ctx, CGRectMake((width - w) / 2, (height - h) / 2, w, h),
+                     image);
+  CGImageRelease(image);
+  CGImageRef canvas = CGBitmapContextCreateImage(ctx);
+  CGContextRelease(ctx);
+  if (!canvas)
+    return 70;
+  [NSFileManager.defaultManager createDirectoryAtPath:folder
+                          withIntermediateDirectories:YES
+                                           attributes:nil
+                                                error:nil];
+  BOOL ok = YES;
+  for (int y = 0; y < height / 256 && ok; y++)
+    for (int x = 0; x < width / 256 && ok; x++) {
+      CGImageRef tile = CGImageCreateWithImageInRect(
+          canvas, CGRectMake(x * 256, y * 256, 256, 256));
+      NSString *name = [NSString stringWithFormat:@"tile_%d_%d.tga", x, y];
+      CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
+      CGContextRef pixels = CGBitmapContextCreate(
+          NULL, 256, 256, 8, 256 * 4, rgb,
+          kCGImageAlphaNoneSkipLast | kCGBitmapByteOrder32Big);
+      CGColorSpaceRelease(rgb);
+      if (!tile || !pixels) {
+        if (tile)
+          CGImageRelease(tile);
+        if (pixels)
+          CGContextRelease(pixels);
+        ok = NO;
+        break;
+      }
+      CGContextDrawImage(pixels, CGRectMake(0, 0, 256, 256), tile);
+      const uint8_t *rgba = CGBitmapContextGetData(pixels);
+      NSMutableData *tga = [NSMutableData dataWithLength:18 + 256 * 256 * 3];
+      uint8_t *bytes = tga.mutableBytes;
+      bytes[2] = 2;
+      bytes[13] = 1;
+      bytes[15] = 1;
+      bytes[16] = 24;
+      bytes[17] =
+          0; // GoldSrc expects bottom-up TGA rows, including older loaders.
+      for (int i = 0; i < 256 * 256; i++) {
+        int source = ((255 - i / 256) * 256 + i % 256) * 4;
+        bytes[18 + i * 3] = rgba[source + 2];
+        bytes[19 + i * 3] = rgba[source + 1];
+        bytes[20 + i * 3] = rgba[source];
+      }
+      ok = [tga writeToFile:J(folder, name) atomically:YES];
+      CGContextRelease(pixels);
+      CGImageRelease(tile);
+    }
+  CGImageRelease(canvas);
+  return ok ? 0 : 74;
+}
+
 int main(int argc, const char **argv) {
   @autoreleasepool {
     if (argc == 4 && !strcmp(argv[1], "--make-icon"))
       return MakeIcon(@(argv[2]), @(argv[3]));
+    if (argc == 6 && !strcmp(argv[1], "--make-goldsrc-background"))
+      return MakeBackground(@(argv[2]), @(argv[3]), atoi(argv[4]),
+                            atoi(argv[5]));
     NSApplication *app = NSApplication.sharedApplication;
     Runner *r = [Runner new];
     app.delegate = r;
